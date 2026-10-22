@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { z } from 'zod';
 
-// Keep browser requests same-origin. Nginx/Vite forwards /api to Flask.
-const api = axios.create({ baseURL: '/', withCredentials: true, timeout: 20_000, headers: { Accept: 'application/json' } });
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, '') || 'http://localhost:5000', withCredentials: true, timeout: 20_000, headers: { Accept: 'application/json' } });
 const csrfSchema = z.object({ csrf_token: z.string().min(1) });
 const errorSchema = z.object({ error: z.string(), code: z.string().optional() });
 

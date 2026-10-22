@@ -5,14 +5,6 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   css: { postcss: { plugins: [] } },
-  server: {
-    proxy: {
-      '/api': { target: process.env.BACKEND_UPSTREAM || 'http://127.0.0.1:5000' },
-      '/admin': { target: process.env.BACKEND_UPSTREAM || 'http://127.0.0.1:5000' },
-      '/public': { target: process.env.BACKEND_UPSTREAM || 'http://127.0.0.1:5000' },
-      '/static': { target: process.env.BACKEND_UPSTREAM || 'http://127.0.0.1:5000' },
-    },
-  },
   build: {
     sourcemap: false,
     rollupOptions: {

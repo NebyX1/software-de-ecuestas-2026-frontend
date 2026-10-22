@@ -3,8 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateInvitation } from '../features/survey/hooks';
-import { Turnstile, turnstileEnabled } from '../features/survey/components/Turnstile';
+import { useCreateInvitation, useSurveySecurity } from '../features/survey/hooks';
+import { Turnstile } from '../features/survey/components/Turnstile';
 import { SurveyCard } from '../components/SurveyCard';
 import { PrivacyNotice } from '../components/PrivacyNotice';
 import { useSurveyStore } from '../store/surveyStore';
@@ -25,6 +25,8 @@ export default function Welcome() {
   const begin = useSurveyStore((s) => s.begin);
   const navigate = useNavigate();
   const invitation = useCreateInvitation();
+  const security = useSurveySecurity(!simulation);
+  const sitekey = security.data?.turnstileSiteKey ?? '';
   const [turnstileToken, setTurnstileToken] = useState('');
   const [resetKey, setResetKey] = useState(0);
 
@@ -115,12 +117,13 @@ export default function Welcome() {
           )}
         </div>
 
-        {!simulation && <Turnstile onToken={setTurnstileToken} resetKey={resetKey} />}
+        {!simulation && <Turnstile sitekey={sitekey} onToken={setTurnstileToken} resetKey={resetKey} />}
+        {!simulation && security.error && <div><p role="alert" className="survey-error">{security.error.message}</p><button type="button" className="survey-option mt-3" onClick={() => { void security.refetch(); }}>Reintentar conexión</button></div>}
         {invitation.error && <p role="alert" className="survey-error">{invitation.error.message}</p>}
 
         <button
           type="submit"
-          disabled={invitation.isPending || !consented || (!simulation && turnstileEnabled && !turnstileToken)}
+          disabled={invitation.isPending || !consented || (!simulation && (security.isPending || security.isError || (Boolean(sitekey) && !turnstileToken)))}
           aria-busy={invitation.isPending}
           className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-primary px-7 text-[16px] font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover"
         >

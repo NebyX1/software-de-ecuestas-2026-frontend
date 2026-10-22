@@ -5,9 +5,8 @@ interface TurnstileApi {
   remove(id: string): void;
 }
 declare global { interface Window { turnstile?: TurnstileApi } }
-const sitekey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
 
-export function Turnstile({ onToken, resetKey }: { onToken: (token: string) => void; resetKey: number }) {
+export function Turnstile({ sitekey, onToken, resetKey }: { sitekey: string; onToken: (token: string) => void; resetKey: number }) {
   const container = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
@@ -40,8 +39,7 @@ export function Turnstile({ onToken, resetKey }: { onToken: (token: string) => v
       script?.removeEventListener('error', failed);
       if (widget && window.turnstile) window.turnstile.remove(widget);
     };
-  }, [onToken, resetKey]);
+  }, [sitekey, onToken, resetKey]);
   if (!sitekey) return null;
   return <div><div ref={container} />{error && <p role="alert" className="survey-error">No se pudo completar el control de seguridad. Comprobá tu conexión y recargá la página.</p>}</div>;
 }
-export const turnstileEnabled = Boolean(sitekey);

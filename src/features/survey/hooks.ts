@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
-import { postCsv, postValidated } from '../../lib/axios';
+import api, { asApiError, postCsv, postValidated } from '../../lib/axios';
 import { getDeviceId, readAttribution } from './device';
 import type { CompleteSurveyAnswers } from './schema';
 import { collectClientMetadata } from './metadata';
@@ -11,6 +11,14 @@ const sessionSchema = z.object({ status: z.enum(['active', 'completed']), expire
 const challengeSchema = z.object({ challengeId: z.string().uuid(), question: z.string().min(1), expiresAt: z.string().datetime({ offset: true }) });
 const responseSchema = z.object({ receiptId: z.string().min(1), status: z.literal('completed') });
 export const CONSENT_VERSION = '2026-02';
+
+const securitySchema = z.object({ csrf_token: z.string().min(1), turnstileSiteKey: z.string().default('') });
+export function useSurveySecurity(enabled: boolean) {
+  return useQuery({ queryKey: ['survey-security'], enabled, queryFn: async () => {
+    try { return securitySchema.parse((await api.get<unknown>('/api/csrf')).data); }
+    catch (error) { throw asApiError(error); }
+  } });
+}
 
 export function createInvitation(turnstileToken?: string) {
   return postValidated('/api/survey/links', { deviceId: getDeviceId(), ...(turnstileToken ? { turnstileToken } : {}), attribution: readAttribution() }, linkSchema);

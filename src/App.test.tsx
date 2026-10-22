@@ -21,6 +21,28 @@ beforeEach(() => {
   vi.spyOn(api, 'get').mockResolvedValue(response({ csrf_token: 'csrf-proof' }));
 });
 describe('public survey flow', () => {
+  it('does not create an invitation when loading the security configuration fails', async () => {
+    vi.spyOn(api, 'get').mockRejectedValue(new AxiosError('Offline'));
+    const post = vi.spyOn(api, 'post');
+    mount();
+    await userEvent.click(screen.getByRole('checkbox'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar');
+    expect(screen.getByRole('button', { name: 'Comenzar encuesta' })).toBeDisabled();
+    expect(post).not.toHaveBeenCalled();
+    vi.spyOn(api, 'get').mockResolvedValue(response({ csrf_token: 'csrf-proof', turnstileSiteKey: '' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar conexión' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Comenzar encuesta' })).toBeEnabled());
+  });
+  it('waits for the optional widget enabled by the backend before issuing a link', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue(response({ csrf_token: 'csrf-proof', turnstileSiteKey: 'public-widget-key' }));
+    const post = vi.spyOn(api, 'post');
+    mount();
+    await userEvent.click(screen.getByRole('checkbox'));
+    await waitFor(() => expect(document.querySelector('#turnstile-api')).toBeTruthy());
+    expect(screen.getByRole('button', { name: 'Comenzar encuesta' })).toBeDisabled();
+    expect(post).not.toHaveBeenCalled();
+    document.querySelector('#turnstile-api')?.remove();
+  });
   it('does not issue a link for GET/prefetch and creates one only after consent', async () => {
     const post = vi.spyOn(api, 'post').mockImplementation(async (path) => response(path === '/api/survey/links' ? { token: TOKEN, expiresAt } : { status: 'active', expiresAt }));
     mount();
