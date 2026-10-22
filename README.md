@@ -20,7 +20,9 @@ La conexión sigue el frontend de Buzón Ciudadano: Axios toma la URL del backen
 
 Crear una aplicación Dockerfile desde este repositorio, con puerto interno **8080**, dominio **`https://uypolls.online`** y healthcheck `/health`.
 
-La única variable del frontend es:
+La plantilla pública `.env.example` deja el valor vacío. Los archivos reales `.env` y `.env.coolify` permanecen fuera de Git. La URL de la API es pública y todas las variables `VITE_*` son visibles en el navegador: nunca deben contener contraseñas ni claves secretas.
+
+La única variable del frontend, que se configura en Coolify, es:
 
 ```dotenv
 VITE_API_URL=https://mapi.uypolls.online
