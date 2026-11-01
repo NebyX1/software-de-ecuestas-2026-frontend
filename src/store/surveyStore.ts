@@ -37,6 +37,7 @@ export function clearDraftStorage() {
 
 const surveyState = (simulation = false): StateCreator<SurveyState> => (set) => ({
   ...initial(),
+  attachInvitation: (token, expiresAt) => set({ ...initial(), token, expiresAt }),
   begin: (token, expiresAt) => set({ ...initial(), token, expiresAt, currentStep: 'age', startedAt: new Date().toISOString() }),
   recoverCompleted: (receiptId) => set({ ...initial(), receiptId, currentStep: 'completed', completed: true }),
   setStep: (requested) => set((state) => ({ currentStep: reachableStep(requested, state.answers) })),
@@ -80,7 +81,7 @@ const publicSurveyStore = create<SurveyState>()(persist(surveyState(), {
     const parsed = persistedSchema.safeParse(persisted);
     if (!parsed.success) return current;
     const answers = cleanConditionalAnswers(parsed.data.answers);
-    const currentStep = reachableStep(parsed.data.currentStep, answers);
+    const currentStep = parsed.data.currentStep === 'welcome' ? 'welcome' : reachableStep(parsed.data.currentStep, answers);
     return { ...current, ...parsed.data, answers, currentStep, completed: false, receiptId: null, terminated: currentStep === 'notEligible' };
   },
 }));

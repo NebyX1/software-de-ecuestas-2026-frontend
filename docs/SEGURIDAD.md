@@ -14,6 +14,10 @@ No existe una garantía de «una persona, una respuesta» para un formulario pú
 
 ## Capas
 
+La entrada pública (`/` o `/participar`) genera automáticamente el enlace individual y reemplaza la dirección antes de mostrar consentimiento o preguntas. La invitación se valida en el servidor antes de exponer el formulario. Crear el enlace no implica consentimiento ni registra opiniones. Se recupera la invitación de la pestaña al volver a la entrada; un token inválido, copiado a otro navegador o consumido no se sustituye por otro automáticamente. Los reintentos de creación se solicitan de forma explícita después de un error; los envíos conservan su idempotencia del servidor.
+
+Esto no autentica el origen publicitario. `fbclid`, Referer, User-Agent y los parámetros UTM pueden copiarse o falsificarse; nunca se consideran una autorización emitida por Meta. Bloquearlos no impediría compartir la URL base y excluiría visitas legítimas que no los entregan. El acceso restringido se aplica al token individual y al navegador que lo obtuvo.
+
 | Riesgo | Control | Límite práctico |
 | --- | --- | --- |
 | Compartir el enlace individual | Token aleatorio ligado a cookie HttpOnly y UUID local; validación del servidor | El propio navegador autorizado sigue pudiendo abrir su invitación |

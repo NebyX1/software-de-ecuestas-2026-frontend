@@ -3,6 +3,17 @@ import { COMPLETED_KEY, STORAGE_KEY, useSurveyStore, createSimulationStore } fro
 
 beforeEach(() => { useSurveyStore.getState().resetAll(); localStorage.clear(); sessionStorage.clear(); });
 describe('draft security', () => {
+  it('keeps the personal link separate from consent, including after draft hydration', async () => {
+    useSurveyStore.getState().attachInvitation('personal-token', '2026-12-01T00:00:00Z');
+    expect(useSurveyStore.getState().token).toBe('personal-token');
+    expect(useSurveyStore.getState().currentStep).toBe('welcome');
+    expect(useSurveyStore.getState().startedAt).toBe('');
+    await useSurveyStore.persist.rehydrate();
+    expect(useSurveyStore.getState().currentStep).toBe('welcome');
+    useSurveyStore.getState().begin('personal-token', '2026-12-01T00:00:00Z');
+    expect(useSurveyStore.getState().currentStep).toBe('age');
+    expect(useSurveyStore.getState().startedAt).not.toBe('');
+  });
   it('does not preselect age and residence', () => {
     expect(useSurveyStore.getState().answers.adult).toBeUndefined();
     expect(useSurveyStore.getState().answers.lavallejaResident).toBeUndefined();

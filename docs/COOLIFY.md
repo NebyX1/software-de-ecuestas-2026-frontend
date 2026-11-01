@@ -39,7 +39,7 @@ Las cookies se emiten para el host del backend, con `Secure`, `HttpOnly` y `Same
 
 Cada POST de la API exige un token CSRF ligado a la sesión y valida el origen y la referencia HTTPS contra los orígenes autorizados. Los formularios administrativos mantienen la comprobación del propio origen del backend. No desactivar CSRF para corregir CORS.
 
-La campaña abre **https://uypolls.online/participar**, el panel **https://mapi.uypolls.online/admin/login** y la simulación **https://uypolls.online/simular**. La comprobación de API es **https://mapi.uypolls.online/api/csrf**.
+La campaña puede abrir **https://uypolls.online/** o **https://uypolls.online/participar**: ambas entradas emiten la invitación automáticamente y reemplazan la URL por `/s/<token>` antes de mostrar el formulario. El panel usa **https://mapi.uypolls.online/admin/login** y la simulación **https://uypolls.online/simular**. La comprobación de API es **https://mapi.uypolls.online/api/csrf**.
 
 ## Archivos de configuración
 

@@ -6,7 +6,7 @@ import type { CompleteSurveyAnswers } from './schema';
 import { collectClientMetadata } from './metadata';
 import { useSimulation } from '../simulation/context';
 
-export const linkSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{32,128}$/), expiresAt: z.string().datetime({ offset: true }) });
+export const linkSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/), expiresAt: z.string().datetime({ offset: true }) });
 const sessionSchema = z.object({ status: z.enum(['active', 'completed']), expiresAt: z.string().datetime({ offset: true }), receiptId: z.string().optional() });
 const challengeSchema = z.object({ challengeId: z.string().uuid(), question: z.string().min(1), expiresAt: z.string().datetime({ offset: true }) });
 const responseSchema = z.object({ receiptId: z.string().min(1), status: z.literal('completed') });
@@ -22,12 +22,6 @@ export function useSurveySecurity(enabled: boolean) {
 
 export function createInvitation(turnstileToken?: string) {
   return postValidated('/api/survey/links', { deviceId: getDeviceId(), ...(turnstileToken ? { turnstileToken } : {}), attribution: readAttribution() }, linkSchema);
-}
-export function useCreateInvitation() {
-  const simulation = useSimulation();
-  return useMutation({ mutationFn: (turnstileToken?: string) => simulation
-    ? Promise.resolve({ token: simulation.runId, expiresAt: simulation.expiresAt })
-    : createInvitation(turnstileToken) });
 }
 export function useSurveySession(token: string | null) {
   return useQuery({ queryKey: ['survey-session', token], enabled: Boolean(token), queryFn: () => postValidated('/api/survey/session', { token, deviceId: getDeviceId() }, sessionSchema), gcTime: 0 });

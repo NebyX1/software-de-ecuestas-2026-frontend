@@ -5,7 +5,7 @@ const root = fileURLToPath(new URL('./', import.meta.url));
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: 'controls.spec.ts',
+  testMatch: '*.spec.ts',
   outputDir: './test-results/visual',
   timeout: 60_000,
   expect: { timeout: 5000 },

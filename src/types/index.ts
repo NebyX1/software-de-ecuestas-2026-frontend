@@ -180,6 +180,7 @@ export interface SurveyState {
   token: string | null;
   expiresAt: string | null;
   receiptId: string | null;
+  attachInvitation: (token: string, expiresAt: string) => void;
   begin: (token: string, expiresAt: string) => void;
   recoverCompleted: (receiptId: string | null) => void;
   currentStep: StepId;

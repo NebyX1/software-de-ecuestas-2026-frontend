@@ -1,10 +1,6 @@
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCreateInvitation, useSurveySecurity } from '../features/survey/hooks';
-import { Turnstile } from '../features/survey/components/Turnstile';
 import { SurveyCard } from '../components/SurveyCard';
 import { PrivacyNotice } from '../components/PrivacyNotice';
 import { useSurveyStore } from '../store/surveyStore';
@@ -23,12 +19,8 @@ type ConsentForm = z.infer<typeof consentSchema>;
 export default function Welcome() {
   const simulation = useSimulation();
   const begin = useSurveyStore((s) => s.begin);
-  const navigate = useNavigate();
-  const invitation = useCreateInvitation();
-  const security = useSurveySecurity(!simulation);
-  const sitekey = security.data?.turnstileSiteKey ?? '';
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [resetKey, setResetKey] = useState(0);
+  const token = useSurveyStore((s) => s.token);
+  const expiresAt = useSurveyStore((s) => s.expiresAt);
 
   const {
     register,
@@ -42,15 +34,9 @@ export default function Welcome() {
 
   const consented = watch('consent') === true;
 
-  const onSubmit: SubmitHandler<ConsentForm> = async () => {
-    try {
-      const result = await invitation.mutateAsync(turnstileToken || undefined);
-      begin(result.token, result.expiresAt);
-      if (!simulation) navigate(`/s/${result.token}`, { replace: true });
-    } catch {
-      setTurnstileToken('');
-      setResetKey((key) => key + 1);
-    }
+  const onSubmit: SubmitHandler<ConsentForm> = () => {
+    if (simulation) begin(simulation.runId, simulation.expiresAt);
+    else if (token && expiresAt) begin(token, expiresAt);
   };
 
   return (
@@ -117,17 +103,12 @@ export default function Welcome() {
           )}
         </div>
 
-        {!simulation && <Turnstile sitekey={sitekey} onToken={setTurnstileToken} resetKey={resetKey} />}
-        {!simulation && security.error && <div><p role="alert" className="survey-error">{security.error.message}</p><button type="button" className="survey-option mt-3" onClick={() => { void security.refetch(); }}>Reintentar conexión</button></div>}
-        {invitation.error && <p role="alert" className="survey-error">{invitation.error.message}</p>}
-
         <button
           type="submit"
-          disabled={invitation.isPending || !consented || (!simulation && (security.isPending || security.isError || (Boolean(sitekey) && !turnstileToken)))}
-          aria-busy={invitation.isPending}
+          disabled={!consented || (!simulation && (!token || !expiresAt))}
           className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-primary px-7 text-[16px] font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover"
         >
-          {invitation.isPending ? 'Preparando tu enlace…' : 'Comenzar encuesta'}
+          Comenzar encuesta
         </button>
 
         <p className="text-center text-[12px] text-ink-faint">

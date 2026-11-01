@@ -25,6 +25,7 @@ import MunicipalityEvaluation from './pages/MunicipalityEvaluation';
 import PhoneValidation from './pages/PhoneValidation';
 import Priorities from './pages/Priorities';
 import Concerns from './pages/Concerns';
+import { CampaignEntry } from './features/survey/CampaignEntry';
 
 export function SurveyStep({ step }: { step: StepId }) {
   switch (step) {
@@ -70,16 +71,18 @@ export function SurveyStep({ step }: { step: StepId }) {
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  const tokenMatch = /^\/s\/([A-Za-z0-9_-]{32,128})\/?$/.exec(location.pathname);
+  const tokenMatch = /^\/s\/([A-Za-z0-9_-]{43})\/?$/.exec(location.pathname);
   const routeToken = tokenMatch?.[1] ?? null;
   const token = useSurveyStore((s) => s.token);
+  const expiresAt = useSurveyStore((s) => s.expiresAt);
   const currentStep = useSurveyStore((s) => s.currentStep);
   const answers = useSurveyStore((s) => s.answers);
   const completed = useSurveyStore((s) => s.completed);
   const setStep = useSurveyStore((s) => s.setStep);
-  const activeStep = reachableStep(currentStep, answers);
-  const begin = useSurveyStore((s) => s.begin);
+  const activeStep = currentStep === 'welcome' ? 'welcome' : reachableStep(currentStep, answers);
+  const attachInvitation = useSurveyStore((s) => s.attachInvitation);
   const recoverCompleted = useSurveyStore((s) => s.recoverCompleted);
+  const resetAll = useSurveyStore((s) => s.resetAll);
   const session = useSurveySession(routeToken);
   const base = location.pathname === '/' || location.pathname === '/participar';
 
@@ -102,6 +105,7 @@ export default function App() {
       try {
         if (localStorage.getItem(COMPLETED_KEY) === '1') { recoverCompleted(null); return; }
       } catch { /* Storage limitations are handled on entry. */ }
+      if (token && expiresAt && Date.parse(expiresAt) <= Date.now()) { resetAll(); return; }
       if (token) navigate(`/s/${token}`, { replace: true });
       return;
     }
@@ -109,13 +113,13 @@ export default function App() {
     if (session.data.status === 'completed') {
       recoverCompleted(session.data.receiptId ?? null);
     } else if (token !== routeToken) {
-      begin(routeToken, session.data.expiresAt);
+      attachInvitation(routeToken, session.data.expiresAt);
     }
-  }, [base, routeToken, token, session.data, currentStep, completed, begin, recoverCompleted, navigate]);
+  }, [base, routeToken, token, expiresAt, session.data, currentStep, completed, attachInvitation, recoverCompleted, resetAll, navigate]);
 
   let content;
   if (currentStep === 'completed' && completed) content = <Completed />;
-  else if (base && !token) content = <Welcome />;
+  else if (base && !token) content = <CampaignEntry />;
   else if (!routeToken && !base) content = <ServiceMessage error={new ApiError('La dirección no corresponde a un enlace de la encuesta.', 'invalid_link')} />;
   else if (session.error) content = <ServiceMessage error={session.error} retry={() => { void session.refetch(); }} />;
   else if (!session.data || token !== routeToken) content = <SurveyCard><p role="status" className="text-ink-soft">Verificando tu enlace personal…</p></SurveyCard>;
