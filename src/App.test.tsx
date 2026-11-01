@@ -93,7 +93,7 @@ describe('public survey flow', () => {
     expect(submissions).toHaveLength(2);
     expect(submissions[0][1]).toEqual(submissions[1][1]);
     expect(submissions[0][1]).toMatchObject({ phone: '+59899123456', challengeId: challenge.challengeId, challengeAnswer: '46', website: '' });
-    expect(submissions[0][1]).toMatchObject({ consentVersion: '2026-02', clientMetadata: { language: navigator.language, viewport: { width: window.innerWidth, height: window.innerHeight } } });
+    expect(submissions[0][1]).toMatchObject({ consentVersion: '2026-03', clientMetadata: { language: navigator.language, viewport: { width: window.innerWidth, height: window.innerHeight } } });
   });
   it.each(['challenge_invalid', 'challenge_expired'])('refreshes %s without losing phone or opinions', async (code) => {
     const store = useSurveyStore.getState();

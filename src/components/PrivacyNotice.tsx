@@ -1,6 +1,8 @@
 import { CheckCircle2, Info, Lock, Smartphone } from 'lucide-react';
+import { useSimulation } from '../features/simulation/context';
 
 export function PrivacyNotice() {
+  const simulation = useSimulation();
   return (
     <div className="rounded-2xl border border-[#E2E0EC] bg-white p-4 text-[13px] leading-relaxed text-ink-soft sm:p-5">
       <div className="flex items-start gap-3">
@@ -38,6 +40,11 @@ export function PrivacyNotice() {
               </span>
             </li>
           </ul>
+          <p>
+            {simulation
+              ? 'En esta simulación no se guarda la dirección IP ni las respuestas de prueba.'
+              : 'Al enviar, registramos la dirección IP pública de la conexión junto con la respuesta para control de calidad y prevención de participaciones duplicadas. Su consulta y exportación se limitan al personal autorizado.'}
+          </p>
           <p>
             Al enviar registramos información técnica que informa tu navegador: tipo de dispositivo, sistema operativo,
             navegador, modelo cuando está disponible, idioma, zona horaria y dimensiones de pantalla. Se utiliza para

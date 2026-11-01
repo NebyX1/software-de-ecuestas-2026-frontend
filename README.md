@@ -40,6 +40,8 @@ La imagen ejecuta Nginx sin root. Los recursos compilados se cachean por hash y 
 
 ## Encuesta y seguridad
 
+El aviso de participación 2026-03 informa que la IP pública de envío se registra junto con cada respuesta, con acceso limitado al panel y CSV administrativos. La simulación no almacena IP de respuestas.
+
 La navegación exige los requisitos de cada pantalla y vuelve a validarlos al restaurar borradores. Minas no muestra preguntas municipales. Las seis localidades municipales solo evalúan su municipio; las zonas «otra» preguntan pertenencia y omiten el bloque cuando no se declara un municipio. Cambiar localidad/pertenencia elimina opiniones municipales anteriores; confirmar la misma conserva las vigentes. Se limpian partido y texto Otro cuando cambia su condición. Ver `docs/LOGICA_ENCUESTA.md` en los paquetes exportados.
 
 Al enviar se incluyen datos técnicos opcionales del navegador: idioma, zona horaria, pantalla, ventana, densidad y capacidad táctil. Client Hints agrega sistema y modelo cuando están disponibles, con espera máxima de 500 ms; su ausencia no bloquea la encuesta. El backend combina esos datos con la detección del User-Agent. El aviso de privacidad informa esta captura. No se guardan estos metadatos en el borrador ni se obtiene un identificador de hardware. Los datos son descriptivos y pueden ser aproximados; ver `docs/DISPOSITIVOS.md` en los paquetes exportados.

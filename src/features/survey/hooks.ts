@@ -10,7 +10,7 @@ export const linkSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{32,
 const sessionSchema = z.object({ status: z.enum(['active', 'completed']), expiresAt: z.string().datetime({ offset: true }), receiptId: z.string().optional() });
 const challengeSchema = z.object({ challengeId: z.string().uuid(), question: z.string().min(1), expiresAt: z.string().datetime({ offset: true }) });
 const responseSchema = z.object({ receiptId: z.string().min(1), status: z.literal('completed') });
-export const CONSENT_VERSION = '2026-02';
+export const CONSENT_VERSION = '2026-03';
 
 const securitySchema = z.object({ csrf_token: z.string().min(1), turnstileSiteKey: z.string().default('') });
 export function useSurveySecurity(enabled: boolean) {
