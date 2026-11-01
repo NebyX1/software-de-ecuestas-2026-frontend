@@ -8,7 +8,7 @@ import { SurveyCard } from '../../components/SurveyCard';
 import { Brand } from '../../components/SurveyHeader';
 import { SurveyLayout } from '../../components/SurveyLayout';
 import { ServiceMessage } from '../../components/ServiceMessage';
-import { ApiError, postValidated } from '../../lib/axios';
+import api, { ApiError, postValidated } from '../../lib/axios';
 import { createSimulationStore, SurveyStoreContext, useSurveyStore } from '../../store/surveyStore';
 import { reachableStep } from '../../utils/surveyFlow';
 import { getSimulationStatus, SIMULATION_SESSION_KEY, simulationStatusSchema, type ActiveSimulation } from './api';
@@ -39,7 +39,7 @@ function SimulationLogin({ disabled, message }: { disabled: boolean; message?: s
           {login.error && <p role="alert" className="survey-error">{login.error.message}</p>}
           <button type="submit" disabled={login.isPending} className="survey-option w-full justify-center bg-primary! font-semibold text-white! disabled:opacity-50">{login.isPending ? 'Verificando…' : 'Ingresar a la simulación'}</button>
         </form></>}
-      <a href="/admin/simulation" className="mt-6 inline-block py-2 text-[14px] text-primary underline">Ir al panel de administración</a>
+      <a href={api.getUri({ url: '/admin/simulation' })} className="mt-6 inline-block py-2 text-[14px] text-primary underline">Ir al panel de administración</a>
     </SurveyCard>
   </div></div>;
 }
@@ -92,8 +92,11 @@ function SimulationSession({ access }: { access: ActiveSimulation }) {
 
 export default function SimulationApp() {
   const status = useQuery({ queryKey: SIMULATION_SESSION_KEY, queryFn: getSimulationStatus, refetchInterval: 5000, refetchIntervalInBackground: true, refetchOnWindowFocus: true, staleTime: 0, gcTime: 0 });
-  if (status.error) return <div className="mx-auto max-w-[780px] p-6"><ServiceMessage error={status.error} retry={() => { void status.refetch(); }} /></div>;
+  if (status.error && !status.data) return <div className="mx-auto max-w-[780px] p-6"><ServiceMessage error={status.error} retry={() => { void status.refetch(); }} /></div>;
   if (!status.data) return <div className="p-10 text-center" role="status">Verificando el acceso de prueba…</div>;
   if (status.data.status !== 'active') return <SimulationLogin disabled={status.data.status === 'disabled'} message={status.data.message} />;
-  return <SimulationSession key={status.data.runId + status.data.expiresAt} access={status.data} />;
+  return <>
+    {status.error && <div className="mx-auto max-w-[780px] px-4 pt-4"><p role="alert" className="survey-error">No pudimos comprobar el acceso de prueba. Tus respuestas siguen en esta pestaña. Reintentá la conexión antes de finalizar.</p><button type="button" className="py-2 text-primary underline" onClick={() => { void status.refetch(); }}>Reintentar conexión</button></div>}
+    <SimulationSession key={status.data.runId + status.data.expiresAt} access={status.data} />
+  </>;
 }

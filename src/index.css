@@ -62,28 +62,29 @@
   .survey-radio {
     @apply pointer-events-none flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-[#5F5F6B] bg-white transition-colors;
   }
-  .survey-option[data-selected='true'] .survey-radio {
+  /* Follow the native checked state in both option cards and matrix cells. */
+  input[type='radio']:checked + .survey-radio {
     @apply border-primary bg-primary;
   }
   .survey-radio::after {
     content: '';
     @apply block h-[10px] w-[10px] rounded-full bg-white opacity-0 transition-opacity;
   }
-  .survey-option[data-selected='true'] .survey-radio::after {
+  input[type='radio']:checked + .survey-radio::after {
     @apply opacity-100;
   }
 
   .survey-checkbox {
     @apply pointer-events-none flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border-2 border-[#5F5F6B] bg-white transition-colors;
   }
-  .survey-option[data-selected='true'] .survey-checkbox {
+  input[type='checkbox']:checked + .survey-checkbox {
     @apply border-primary bg-primary;
   }
 
   .survey-check-svg {
     @apply h-[14px] w-[14px] text-white opacity-0;
   }
-  .survey-option[data-selected='true'] .survey-check-svg {
+  input[type='checkbox']:checked + .survey-checkbox .survey-check-svg {
     @apply opacity-100;
   }
 
