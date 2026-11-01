@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ServiceMessage } from '../../components/ServiceMessage';
 import { SurveyLayout } from '../../components/SurveyLayout';
@@ -11,6 +11,7 @@ import { Turnstile } from './components/Turnstile';
  * to the personal URL, after the server has checked its browser ownership. */
 export function CampaignEntry() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const attachInvitation = useSurveyStore((state) => state.attachInvitation);
   const security = useSurveySecurity(true);
   const sitekey = security.data?.turnstileSiteKey ?? '';
@@ -31,9 +32,14 @@ export function CampaignEntry() {
 
   useEffect(() => {
     if (!invitation.data) return;
+    // The server only includes this after receiving the signed browser cookie
+    // on link creation. Keep that proof in memory; a reload validates anew.
+    if (invitation.data.session) {
+      queryClient.setQueryData(['survey-session', invitation.data.token], invitation.data.session);
+    }
     attachInvitation(invitation.data.token, invitation.data.expiresAt);
     navigate(`/s/${invitation.data.token}`, { replace: true });
-  }, [attachInvitation, invitation.data, navigate]);
+  }, [attachInvitation, invitation.data, navigate, queryClient]);
 
   if (security.error) return <SurveyLayout><ServiceMessage error={security.error} retry={() => { void security.refetch(); }} /></SurveyLayout>;
   if (invitation.error) return <SurveyLayout><ServiceMessage error={invitation.error} retry={() => {

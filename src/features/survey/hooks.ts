@@ -6,8 +6,13 @@ import type { CompleteSurveyAnswers } from './schema';
 import { collectClientMetadata } from './metadata';
 import { useSimulation } from '../simulation/context';
 
-export const linkSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/), expiresAt: z.string().datetime({ offset: true }) });
 const sessionSchema = z.object({ status: z.enum(['active', 'completed']), expiresAt: z.string().datetime({ offset: true }), receiptId: z.string().optional() });
+const issuedSessionSchema = z.object({ status: z.literal('active'), expiresAt: z.string().datetime({ offset: true }) });
+export const linkSchema = z.object({
+  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  expiresAt: z.string().datetime({ offset: true }),
+  session: issuedSessionSchema.optional(),
+}).refine((link) => !link.session || link.session.expiresAt === link.expiresAt, { path: ['session', 'expiresAt'] });
 const challengeSchema = z.object({ challengeId: z.string().uuid(), question: z.string().min(1), expiresAt: z.string().datetime({ offset: true }) });
 const responseSchema = z.object({ receiptId: z.string().min(1), status: z.literal('completed') });
 export const CONSENT_VERSION = '2026-03';
@@ -15,7 +20,7 @@ export const CONSENT_VERSION = '2026-03';
 const securitySchema = z.object({ csrf_token: z.string().min(1), turnstileSiteKey: z.string().default('') });
 export function useSurveySecurity(enabled: boolean) {
   return useQuery({ queryKey: ['survey-security'], enabled, queryFn: async () => {
-    try { return securitySchema.parse((await api.get<unknown>('/api/csrf')).data); }
+    try { return securitySchema.parse((await api.get<unknown>('/api/csrf', { params: { entry: 'survey' } })).data); }
     catch (error) { throw asApiError(error); }
   } });
 }
@@ -24,7 +29,7 @@ export function createInvitation(turnstileToken?: string, csrfToken?: string) {
   return postValidated('/api/survey/links', { deviceId: getDeviceId(), ...(turnstileToken ? { turnstileToken } : {}), attribution: readAttribution() }, linkSchema, csrfToken);
 }
 export function useSurveySession(token: string | null) {
-  return useQuery({ queryKey: ['survey-session', token], enabled: Boolean(token), queryFn: () => postValidated('/api/survey/session', { token, deviceId: getDeviceId() }, sessionSchema), gcTime: 0 });
+  return useQuery({ queryKey: ['survey-session', token], enabled: Boolean(token), queryFn: () => postValidated('/api/survey/session', { token, deviceId: getDeviceId() }, sessionSchema), staleTime: 30_000, gcTime: 60_000 });
 }
 export function useSurveyChallenge(token: string | null) {
   const simulation = useSimulation();

@@ -15,9 +15,10 @@ async function mockApi(page: Page, options: {
   linkGate?: Promise<void>;
   sessionGate?: Promise<void>;
   failFirstLink?: boolean;
+  confirmedSession?: boolean;
   sessionError?: { status: number; code: string; error: string };
 } = {}) {
-  const observed = { links: 0, sessions: 0, errors: [] as string[], pageErrors: [] as string[] };
+  const observed = { configurations: 0, links: 0, sessions: 0, errors: [] as string[], pageErrors: [] as string[] };
   page.on('pageerror', error => observed.pageErrors.push(error.message));
   await page.route('**/api/**', async route => {
     const request = route.request();
@@ -30,6 +31,7 @@ async function mockApi(page: Page, options: {
     };
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     if (path === '/api/csrf') {
+      observed.configurations += 1;
       return route.fulfill({ headers, json: { csrf_token: 'compiled-entry-test-csrf', turnstileSiteKey: '' } });
     }
     if (path === '/api/survey/links' && request.method() === 'POST') {
@@ -38,7 +40,8 @@ async function mockApi(page: Page, options: {
       if (options.failFirstLink && observed.links === 1) {
         return route.fulfill({ status: 503, headers, json: { code: 'service_unavailable', error: 'Servicio temporalmente no disponible.' } });
       }
-      return route.fulfill({ status: 201, headers, json: { token, expiresAt } });
+      return route.fulfill({ status: 201, headers, json: { token, expiresAt,
+        ...(options.confirmedSession ? { session: { status: 'active', expiresAt } } : {}) } });
     }
     if (path === '/api/survey/session' && request.method() === 'POST') {
       observed.sessions += 1;
@@ -97,6 +100,7 @@ for (const entry of ['/', '/participar']) {
       session.release();
       await consentRequired(page);
       expect(observed.links).toBe(1);
+      expect(observed.configurations + observed.links + observed.sessions).toBe(4);
 
       gates.sessionGate = revalidation.promise;
       const initialSessionCalls = observed.sessions;
@@ -131,6 +135,42 @@ for (const entry of ['/', '/participar']) {
       session.release();
       revalidation.release();
       draftRevalidation.release();
+    }
+  });
+}
+
+for (const entry of ['/', '/participar']) {
+  test(`compiled fast entry ${entry} uses two requests and validates again after reload`, async ({ page }) => {
+    const link = deferred();
+    const revalidation = deferred();
+    const options = { confirmedSession: true, linkGate: link.promise, sessionGate: revalidation.promise };
+    const observed = await mockApi(page, options);
+    try {
+      await page.goto(entry, { waitUntil: 'domcontentloaded' });
+      await expect.poll(() => observed.links).toBe(1);
+      await blankTransition(page);
+      expect(observed.configurations).toBe(1);
+      link.release();
+      await expect(page).toHaveURL(`${origin}/s/${token}`);
+      // The link response already confirms the server received its browser
+      // cookie: no additional validation request may delay the first screen.
+      await consentRequired(page);
+      expect(observed.links).toBe(1);
+      expect(observed.sessions).toBe(0);
+      expect(observed.configurations + observed.links + observed.sessions).toBe(2);
+
+      await page.reload();
+      await expect.poll(() => observed.sessions).toBe(1);
+      await blankTransition(page);
+      revalidation.release();
+      await consentRequired(page);
+      expect(observed.links).toBe(1);
+      expect(observed.configurations + observed.links + observed.sessions).toBe(4);
+      expect(observed.errors).toEqual([]);
+      expect(observed.pageErrors).toEqual([]);
+    } finally {
+      link.release();
+      revalidation.release();
     }
   });
 }

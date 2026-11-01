@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import api from './lib/axios';
-import { COMPLETED_KEY, useSurveyStore } from './store/surveyStore';
+import { COMPLETED_KEY, STORAGE_KEY, useSurveyStore } from './store/surveyStore';
 import { validAnswers } from './test/fixtures';
 
 const TOKEN = 'a'.repeat(43);
@@ -72,6 +72,65 @@ describe('public survey flow', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Comenzar encuesta' }));
     expect(await screen.findByText('¿Tenés 18 años o más?')).toBeInTheDocument();
     expect(screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked)).toBe(true);
+    expect(post.mock.calls.filter((call) => call[0] === '/api/survey/links')).toHaveLength(1);
+  });
+  it.each(['/', '/participar'])('uses the server-confirmed session at %s with only the configuration and link requests', async (path) => {
+    let resolveLink!: (result: AxiosResponse<unknown>) => void;
+    const link = new Promise<AxiosResponse<unknown>>((resolve) => { resolveLink = resolve; });
+    const post = vi.spyOn(api, 'post').mockImplementation(() => link);
+    mount(path);
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(document.querySelector('header, footer, main, svg')).toBeNull();
+    await act(async () => { resolveLink(response({ token: TOKEN, expiresAt, session: { status: 'active', expiresAt } })); });
+    expect(await screen.findByRole('checkbox')).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Comenzar encuesta' })).toBeDisabled();
+    expect(screen.getByLabelText('Dirección actual')).toHaveTextContent(`/s/${TOKEN}`);
+    expect(api.get).toHaveBeenCalledTimes(1);
+    expect(api.get).toHaveBeenCalledWith('/api/csrf', { params: { entry: 'survey' } });
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith('/api/survey/links', expect.any(Object), { headers: { 'X-CSRFToken': 'csrf-proof' } });
+    expect(sessionStorage.getItem(STORAGE_KEY)).not.toContain('"session"');
+    expect(screen.queryByText('¿Tenés 18 años o más?')).not.toBeInTheDocument();
+  });
+  it.each([
+    { status: 'completed', expiresAt },
+    { status: 'active', expiresAt: '2099-01-01T00:00:00Z' },
+    { status: 'active' },
+    null,
+  ])('rejects an invalid embedded session instead of showing the form', async (session) => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue(response({ token: TOKEN, expiresAt, session }));
+    mount();
+    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar con la encuesta. Volvé a intentar.');
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Dirección actual')).toHaveTextContent('/');
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+  it('does not show the form when a newly issued link lacks confirmation and its cookie was not accepted', async () => {
+    const failed = { ...response({ error: 'Browser cookie missing', code: 'link_bound' }), status: 403 };
+    const post = vi.spyOn(api, 'post')
+      .mockResolvedValueOnce(response({ token: TOKEN, expiresAt }))
+      .mockRejectedValueOnce(new AxiosError('Rejected', 'ERR_BAD_REQUEST', undefined, undefined, failed));
+    mount();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Esta encuesta no está disponible.');
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(post.mock.calls.map((call) => call[0])).toEqual(['/api/survey/links', '/api/survey/session']);
+  });
+  it('validates the token again after remounting with a fresh client, even if its draft came from fast entry', async () => {
+    let resolveSession!: (result: AxiosResponse<unknown>) => void;
+    const session = new Promise<AxiosResponse<unknown>>((resolve) => { resolveSession = resolve; });
+    const post = vi.spyOn(api, 'post').mockImplementation(async (path) => path === '/api/survey/links'
+      ? response({ token: TOKEN, expiresAt, session: { status: 'active', expiresAt } })
+      : session);
+    const firstPage = mount();
+    expect(await screen.findByRole('checkbox')).not.toBeChecked();
+    expect(post).toHaveBeenCalledTimes(1);
+    firstPage.unmount();
+    mount(`/s/${TOKEN}`);
+    await waitFor(() => expect(post.mock.calls.filter((call) => call[0] === '/api/survey/session')).toHaveLength(1));
+    expect(document.querySelector('header, footer, main, svg')).toBeNull();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    await act(async () => { resolveSession(response({ status: 'active', expiresAt })); });
+    expect(await screen.findByRole('checkbox')).not.toBeChecked();
     expect(post.mock.calls.filter((call) => call[0] === '/api/survey/links')).toHaveLength(1);
   });
   it('reuses an owned draft instead of issuing another token at the base address', async () => {
