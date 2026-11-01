@@ -4,7 +4,7 @@ Aplicación independiente con React 19, TypeScript estricto, Vite, Tailwind 4/Da
 
 ## Desarrollo y validación
 
-Requiere Node.js 22.12+ (22 LTS) o 24 LTS.
+Requiere Node.js 22.13+ (22 LTS) o 24 LTS.
 
 ```sh
 npm ci
