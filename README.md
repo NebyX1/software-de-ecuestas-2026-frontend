@@ -40,7 +40,7 @@ La imagen ejecuta Nginx sin root. Los recursos compilados se cachean por hash y 
 
 ## Encuesta y seguridad
 
-El aviso de participación 2026-03 informa que la IP pública de envío se registra junto con cada respuesta, con acceso limitado al panel y CSV administrativos. La simulación no almacena IP de respuestas.
+El aviso de participación 2026-03 informa que la IP pública de envío se registra junto con cada respuesta, con acceso limitado al panel y CSV administrativos. El CSV de simulación también incluye la IP de la conexión al finalizar, sin guardar la simulación en la base de datos.
 
 La navegación exige los requisitos de cada pantalla y vuelve a validarlos al restaurar borradores. Minas no muestra preguntas municipales. Las seis localidades municipales solo evalúan su municipio; las zonas «otra» preguntan pertenencia y omiten el bloque cuando no se declara un municipio. Cambiar localidad/pertenencia elimina opiniones municipales anteriores; confirmar la misma conserva las vigentes. Se limpian partido y texto Otro cuando cambia su condición. Ver `docs/LOGICA_ENCUESTA.md` en los paquetes exportados.
 

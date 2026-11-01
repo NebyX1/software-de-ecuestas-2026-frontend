@@ -42,7 +42,7 @@ export function PrivacyNotice() {
           </ul>
           <p>
             {simulation
-              ? 'En esta simulación no se guarda la dirección IP ni las respuestas de prueba.'
+              ? 'Al finalizar, el CSV de prueba incluye la IP de esta conexión. La simulación no se guarda en la base de datos.'
               : 'Al enviar, registramos la dirección IP pública de la conexión junto con la respuesta para control de calidad y prevención de participaciones duplicadas. Su consulta y exportación se limitan al personal autorizado.'}
           </p>
           <p>

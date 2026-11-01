@@ -26,7 +26,7 @@ function SimulationLogin({ disabled, message }: { disabled: boolean; message?: s
     <header className="mb-7"><Brand /></header><SurveyCard>
       <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-primary">Acceso de prueba</p>
       <h1 className="text-[26px] font-bold text-ink">Simular encuesta</h1>
-      <p className="mt-3 mb-6 text-[14px] leading-relaxed text-ink-soft">Probá el formulario y descargá el CSV al finalizar. Las respuestas de prueba no se guardan.</p>
+      <p className="mt-3 mb-6 text-[14px] leading-relaxed text-ink-soft">Probá el formulario y descargá el CSV al finalizar, incluida la IP de la conexión. La prueba no se guarda en la base de datos.</p>
       {disabled ? <p role="status" className="rounded-xl border border-primary/25 bg-primary-soft p-4 text-ink">La simulación está deshabilitada. Habilitala desde el panel de administración.</p> : <>
         {message && <p role="status" className="mb-5 text-[14px] text-ink-soft">{message}</p>}
         <form className="space-y-4" onSubmit={(event) => { void form.handleSubmit(async (data) => { try { await login.mutateAsync(data); } catch { /* The mutation renders the error. */ } })(event); }}>
@@ -80,7 +80,7 @@ function SimulationSession({ access }: { access: ActiveSimulation }) {
   };
   return <SurveyStoreContext.Provider value={store}><SimulationContext.Provider value={{ runId: access.runId, expiresAt: access.expiresAt, exportCsv, completeExport: setExportCsv, download, restart }}>
     <aside aria-label="Modo de simulación" className="border-b border-primary/25 bg-primary-soft px-4 py-3 text-[13px] text-ink">
-      <div className="mx-auto flex max-w-[740px] flex-wrap items-center gap-x-5 gap-y-2"><strong>Simulación · {access.username}</strong><span>Las respuestas de prueba no se guardan.</span>
+      <div className="mx-auto flex max-w-[740px] flex-wrap items-center gap-x-5 gap-y-2"><strong>Simulación · {access.username}</strong><span>La prueba no se guarda en la base de datos.</span>
         <button type="button" disabled={submitting || logout.isPending} className="py-2 text-primary underline disabled:opacity-50" onClick={restart}>Reiniciar esta prueba</button>
         <button type="button" disabled={submitting || logout.isPending} className="py-2 text-primary underline disabled:opacity-50" onClick={() => logout.mutate()}>Salir de la simulación</button>
         {logout.error && <p role="alert" className="survey-error">{logout.error.message}</p>}
