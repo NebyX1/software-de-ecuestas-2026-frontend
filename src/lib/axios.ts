@@ -24,9 +24,11 @@ export function asApiError(error: unknown): ApiError {
   return new ApiError('El servicio devolvió una respuesta inesperada. Volvé a intentar en unos minutos.', 'invalid_response');
 }
 
-export async function postValidated<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
+export async function postValidated<T>(path: string, body: unknown, schema: z.ZodType<T>, csrfToken?: string): Promise<T> {
   try {
-    const csrf = csrfSchema.parse((await api.get<unknown>('/api/csrf')).data);
+    const csrf = csrfSchema.parse(csrfToken === undefined
+      ? (await api.get<unknown>('/api/csrf')).data
+      : { csrf_token: csrfToken });
     const response = await api.post<unknown>(path, body, { headers: { 'X-CSRFToken': csrf.csrf_token } });
     return schema.parse(response.data);
   } catch (error) {

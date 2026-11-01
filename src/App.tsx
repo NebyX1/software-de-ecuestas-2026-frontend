@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSurveySession } from './features/survey/hooks';
 import { ServiceMessage } from './components/ServiceMessage';
-import { SurveyCard } from './components/SurveyCard';
 import { ApiError } from './lib/axios';
 import { reachableStep } from './utils/surveyFlow';
 import { COMPLETED_KEY } from './store/surveyStore';
@@ -117,12 +116,16 @@ export default function App() {
     }
   }, [base, routeToken, token, expiresAt, session.data, currentStep, completed, attachInvitation, recoverCompleted, resetAll, navigate]);
 
+  // Never render survey chrome while entering or validating the session.
+  if (!(currentStep === 'completed' && completed)) {
+    if (base && !token) return <CampaignEntry />;
+    if (base || (routeToken && !session.error && (!session.data || token !== routeToken || session.data.status === 'completed'))) return null;
+  }
+
   let content;
   if (currentStep === 'completed' && completed) content = <Completed />;
-  else if (base && !token) content = <CampaignEntry />;
   else if (!routeToken && !base) content = <ServiceMessage error={new ApiError('La dirección no corresponde a un enlace de la encuesta.', 'invalid_link')} />;
   else if (session.error) content = <ServiceMessage error={session.error} retry={() => { void session.refetch(); }} />;
-  else if (!session.data || token !== routeToken) content = <SurveyCard><p role="status" className="text-ink-soft">Verificando tu enlace personal…</p></SurveyCard>;
   else content = <SurveyStep step={activeStep} />;
   return <SurveyLayout>{content}</SurveyLayout>;
 }

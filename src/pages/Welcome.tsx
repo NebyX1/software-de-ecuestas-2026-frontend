@@ -69,7 +69,7 @@ export default function Welcome() {
           <p>
             Las respuestas serán tratadas de forma confidencial. Si completás la encuesta, al finalizar te solicitaremos
             un número de celular para control de calidad y validación. Ese dato se almacenerá separadamente de tus
-            respuestas de opinión. Se comprueba su formato y se evitan números repetidos; no se verifica la titularidad.
+            respuestas de opinión.
           </p>
           <p>
             Algunas preguntas se refieren al comportamiento electoral. En esos casos podés responder "Prefiero no
@@ -112,7 +112,7 @@ export default function Welcome() {
         </button>
 
         <p className="text-center text-[12px] text-ink-faint">
-          {simulation ? 'Prueba de la encuesta: las respuestas se pierden al recargar o cerrar esta pestaña.' : 'El progreso se guarda en esta pestaña mientras completás la encuesta. Tu enlace es personal y de un solo uso.'}
+          {simulation ? 'Prueba de la encuesta: las respuestas se pierden al recargar o cerrar esta pestaña.' : 'El progreso se guarda en esta pestaña mientras completás la encuesta.'}
         </p>
       </form>
     </SurveyCard>

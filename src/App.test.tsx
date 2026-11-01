@@ -27,7 +27,7 @@ describe('public survey flow', () => {
     vi.spyOn(api, 'get').mockRejectedValue(new AxiosError('Offline'));
     const post = vi.spyOn(api, 'post');
     mount();
-    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar');
+    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar con la encuesta. Volvé a intentar.');
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
     vi.spyOn(api, 'get').mockResolvedValue(response({ csrf_token: 'csrf-proof', turnstileSiteKey: '' }));
@@ -55,9 +55,15 @@ describe('public survey flow', () => {
     await waitFor(() => expect(post.mock.calls.filter((call) => call[0] === '/api/survey/links')).toHaveLength(1));
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.queryByText('¿Tenés 18 años o más?')).not.toBeInTheDocument();
+    expect(document.querySelector('header, footer, main, svg')).toBeNull();
+    expect(document.querySelector('[role="status"]')).toBeNull();
+    expect(screen.queryByText(/Preparando|Verificando/)).not.toBeInTheDocument();
     await act(async () => { resolveLink(response({ token: TOKEN, expiresAt })); });
     await waitFor(() => expect(screen.getByLabelText('Dirección actual')).toHaveTextContent(`/s/${TOKEN}`));
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(document.querySelector('header, footer, main, svg')).toBeNull();
+    expect(document.querySelector('[role="status"]')).toBeNull();
+    expect(screen.queryByText(/Preparando|Verificando/)).not.toBeInTheDocument();
     await act(async () => { resolveSession(response({ status: 'active', expiresAt })); });
     expect(await screen.findByRole('checkbox')).not.toBeChecked();
     expect(screen.getByRole('button', { name: 'Comenzar encuesta' })).toBeDisabled();
@@ -79,7 +85,7 @@ describe('public survey flow', () => {
   it('retries failed entry only after an explicit action without accepting consent', async () => {
     const post = vi.spyOn(api, 'post').mockRejectedValueOnce(new AxiosError('Offline')).mockImplementation(async (path) => response(path === '/api/survey/links' ? { token: TOKEN, expiresAt } : { status: 'active', expiresAt }));
     mount();
-    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar');
+    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar con la encuesta. Volvé a intentar.');
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(post.mock.calls.filter((call) => call[0] === '/api/survey/links')).toHaveLength(1);
     await userEvent.click(screen.getByRole('button', { name: 'Volver a intentar' }));
@@ -90,7 +96,7 @@ describe('public survey flow', () => {
     localStorage.setItem(COMPLETED_KEY, '1');
     const post = vi.spyOn(api, 'post');
     mount();
-    expect(await screen.findByText('Este navegador ya registró su participación en la encuesta.')).toBeInTheDocument();
+    expect(await screen.findByText('Esta encuesta ya fue respondida.')).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
   });
   it('replaces a known expired draft only on a new visit to the campaign entry', async () => {
@@ -107,7 +113,7 @@ describe('public survey flow', () => {
   it.each(['a'.repeat(32), 'a'.repeat(128), 'bad-token'])('rejects a malformed token route without making API requests', async (token) => {
     const post = vi.spyOn(api, 'post');
     mount(`/s/${token}`);
-    expect(screen.getByRole('alert')).toHaveTextContent('La dirección no corresponde');
+    expect(screen.getByRole('alert')).toHaveTextContent('Esta encuesta no está disponible.');
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
   });
@@ -115,7 +121,8 @@ describe('public survey flow', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Storage denied'); });
     const post = vi.spyOn(api, 'post');
     mount();
-    expect(await screen.findByRole('alert')).toHaveTextContent('habilitar el almacenamiento');
+    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar con la encuesta. Volvé a intentar.');
+    expect(screen.queryByText(/habilitar el almacenamiento/)).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
   });
@@ -123,7 +130,8 @@ describe('public survey flow', () => {
     const failed = { ...response({ error: 'Este enlace no puede utilizarse.', code }), status: 409 };
     vi.spyOn(api, 'post').mockRejectedValue(new AxiosError('Used', 'ERR_BAD_REQUEST', undefined, undefined, failed));
     mount(`/s/${TOKEN}`);
-    expect(await screen.findByText('Este enlace no está disponible')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(code === 'link_used' ? 'Esta encuesta ya fue respondida.' : 'Esta encuesta no está disponible.');
+    expect(screen.queryByText('Este enlace no puede utilizarse.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /encuesta|intentar/i })).not.toBeInTheDocument();
     expect(screen.queryByText('¿Tenés 18 años o más?')).not.toBeInTheDocument();
   });

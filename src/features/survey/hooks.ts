@@ -20,8 +20,8 @@ export function useSurveySecurity(enabled: boolean) {
   } });
 }
 
-export function createInvitation(turnstileToken?: string) {
-  return postValidated('/api/survey/links', { deviceId: getDeviceId(), ...(turnstileToken ? { turnstileToken } : {}), attribution: readAttribution() }, linkSchema);
+export function createInvitation(turnstileToken?: string, csrfToken?: string) {
+  return postValidated('/api/survey/links', { deviceId: getDeviceId(), ...(turnstileToken ? { turnstileToken } : {}), attribution: readAttribution() }, linkSchema, csrfToken);
 }
 export function useSurveySession(token: string | null) {
   return useQuery({ queryKey: ['survey-session', token], enabled: Boolean(token), queryFn: () => postValidated('/api/survey/session', { token, deviceId: getDeviceId() }, sessionSchema), gcTime: 0 });

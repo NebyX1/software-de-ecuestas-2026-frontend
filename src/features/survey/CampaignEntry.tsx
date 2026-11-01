@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { SurveyCard } from '../../components/SurveyCard';
 import { ServiceMessage } from '../../components/ServiceMessage';
+import { SurveyLayout } from '../../components/SurveyLayout';
 import { useSurveyStore } from '../../store/surveyStore';
 import { createInvitation, useSurveySecurity } from './hooks';
 import { Turnstile } from './components/Turnstile';
@@ -22,7 +22,7 @@ export function CampaignEntry() {
   // duplicate first requests could replace the browser-binding cookie.
   const invitation = useQuery({
     queryKey: ['survey-entry', attempt],
-    queryFn: () => createInvitation(turnstileToken || undefined),
+    queryFn: () => createInvitation(turnstileToken || undefined, security.data?.csrf_token),
     enabled: security.isSuccess && (!sitekey || Boolean(turnstileToken)),
     retry: false, retryOnMount: false, refetchOnMount: false,
     refetchOnWindowFocus: false, refetchOnReconnect: false,
@@ -35,14 +35,12 @@ export function CampaignEntry() {
     navigate(`/s/${invitation.data.token}`, { replace: true });
   }, [attachInvitation, invitation.data, navigate]);
 
-  if (security.error) return <ServiceMessage error={security.error} retry={() => { void security.refetch(); }} />;
-  if (invitation.error) return <ServiceMessage error={invitation.error} retry={() => {
+  if (security.error) return <SurveyLayout><ServiceMessage error={security.error} retry={() => { void security.refetch(); }} /></SurveyLayout>;
+  if (invitation.error) return <SurveyLayout><ServiceMessage error={invitation.error} retry={() => {
     setTurnstileToken('');
     setAttempt((value) => value + 1);
-  }} />;
+  }} /></SurveyLayout>;
 
-  return <SurveyCard>
-    <p role="status" className="text-ink-soft">Preparando tu enlace personal…</p>
-    <Turnstile sitekey={sitekey} onToken={setTurnstileToken} resetKey={attempt} />
-  </SurveyCard>;
+  if (!sitekey || invitation.data) return null;
+  return <Turnstile sitekey={sitekey} onToken={setTurnstileToken} resetKey={attempt} />;
 }

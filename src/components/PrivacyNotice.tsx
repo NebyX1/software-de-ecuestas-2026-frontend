@@ -28,7 +28,7 @@ export function PrivacyNotice() {
             <li className="flex items-start gap-2">
               <Smartphone className="mt-0.5 h-[15px] w-[15px] shrink-0 text-primary" aria-hidden="true" />
               <span>
-                El celular solicitado al final se usa para control de calidad; comprobamos su formato y evitamos repeticiones. Se mantiene
+                El celular solicitado al final se usa para control de calidad. Se mantiene
                 separado de tus respuestas de opinión.
               </span>
             </li>
@@ -43,7 +43,7 @@ export function PrivacyNotice() {
           <p>
             {simulation
               ? 'Al finalizar, el CSV de prueba incluye la IP de esta conexión. La simulación no se guarda en la base de datos.'
-              : 'Al enviar, registramos la dirección IP pública de la conexión junto con la respuesta para control de calidad y prevención de participaciones duplicadas. Su consulta y exportación se limitan al personal autorizado.'}
+              : 'Al enviar, registramos la dirección IP pública de la conexión junto con la respuesta para control de calidad. Su consulta y exportación se limitan al personal autorizado.'}
           </p>
           <p>
             Al enviar registramos información técnica que informa tu navegador: tipo de dispositivo, sistema operativo,

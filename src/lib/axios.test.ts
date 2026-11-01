@@ -26,4 +26,17 @@ describe('API security and failures', () => {
     await expect(postValidated('/api/example', {}, z.object({}))).rejects.toMatchObject({ code: 'network_error' });
     expect(post).not.toHaveBeenCalled();
   });
+  it('reuses a validated CSRF token from the security request without another round trip', async () => {
+    vi.mocked(api.get).mockRejectedValue(new AxiosError('A second configuration request must not be needed'));
+    const post = vi.spyOn(api, 'post').mockResolvedValue(response({ status: 'active' }));
+    await expect(postValidated('/api/example', {}, z.object({ status: z.literal('active') }), 'entry-csrf-proof')).resolves.toEqual({ status: 'active' });
+    expect(api.get).not.toHaveBeenCalled();
+    expect(post).toHaveBeenCalledWith('/api/example', {}, { headers: { 'X-CSRFToken': 'entry-csrf-proof' } });
+  });
+  it('rejects an empty supplied CSRF token before sending anything', async () => {
+    const post = vi.spyOn(api, 'post');
+    await expect(postValidated('/api/example', {}, z.object({}), '')).rejects.toMatchObject({ code: 'invalid_response' });
+    expect(api.get).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
+  });
 });

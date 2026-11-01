@@ -62,6 +62,13 @@ async function noForm(page: Page) {
   await expect(page.getByRole('button', { name: 'Comenzar encuesta', exact: true })).toHaveCount(0);
 }
 
+async function blankTransition(page: Page) {
+  await expect(page.locator('#root')).toHaveText('');
+  await expect(page.locator('body')).toHaveText('');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(page.locator('header, footer, main, form, [role="status"], button, img, svg')).toHaveCount(0);
+}
+
 async function consentRequired(page: Page) {
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await expect(page.locator('input[name="consent"]')).not.toBeChecked();
@@ -73,22 +80,30 @@ for (const entry of ['/', '/participar']) {
   test(`compiled ${entry} creates one token automatically before revealing consent`, async ({ page }) => {
     const link = deferred();
     const session = deferred();
-    const observed = await mockApi(page, { linkGate: link.promise, sessionGate: session.promise });
+    const revalidation = deferred();
+    const draftRevalidation = deferred();
+    const gates = { linkGate: link.promise, sessionGate: session.promise };
+    const observed = await mockApi(page, gates);
     try {
       await page.goto(entry, { waitUntil: 'domcontentloaded' });
       await expect.poll(() => observed.links).toBe(1);
       expect(new URL(page.url()).pathname).toBe(entry);
-      await noForm(page);
+      await blankTransition(page);
       link.release();
       await expect(page).toHaveURL(`${origin}/s/${token}`);
       await expect.poll(() => observed.sessions).toBe(1);
       // A token in the URL is insufficient until the backend validates ownership.
-      await noForm(page);
+      await blankTransition(page);
       session.release();
       await consentRequired(page);
       expect(observed.links).toBe(1);
 
+      gates.sessionGate = revalidation.promise;
+      const initialSessionCalls = observed.sessions;
       await page.reload();
+      await expect.poll(() => observed.sessions).toBe(initialSessionCalls + 1);
+      await blankTransition(page);
+      revalidation.release();
       await consentRequired(page);
       expect(observed.links).toBe(1);
       await page.goto('/participar');
@@ -99,12 +114,23 @@ for (const entry of ['/', '/participar']) {
       await page.locator('input[name="consent"]').locator('..').click();
       await page.getByRole('button', { name: 'Comenzar encuesta', exact: true }).click();
       await expect(page.getByText('¿Tenés 18 años o más?', { exact: true })).toBeVisible();
+      // A saved draft must not flash questions or the surrounding layout while
+      // the server is validating its existing personal link after a reload.
+      gates.sessionGate = draftRevalidation.promise;
+      const draftSessionCalls = observed.sessions;
+      await page.reload();
+      await expect.poll(() => observed.sessions).toBe(draftSessionCalls + 1);
+      await blankTransition(page);
+      draftRevalidation.release();
+      await expect(page.getByText('¿Tenés 18 años o más?', { exact: true })).toBeVisible();
       expect(observed.links).toBe(1);
       expect(observed.errors).toEqual([]);
       expect(observed.pageErrors).toEqual([]);
     } finally {
       link.release();
       session.release();
+      revalidation.release();
+      draftRevalidation.release();
     }
   });
 }
@@ -112,7 +138,7 @@ for (const entry of ['/', '/participar']) {
 test('compiled entry fails closed and only retries creation after explicit action', async ({ page }) => {
   const observed = await mockApi(page, { failFirstLink: true });
   await page.goto('/');
-  await expect(page.getByRole('alert')).toHaveText('Servicio temporalmente no disponible.');
+  await expect(page.getByRole('alert')).toHaveText('No pudimos conectar con la encuesta. Volvé a intentar.');
   await noForm(page);
   expect(new URL(page.url()).pathname).toBe('/');
   expect(observed.links).toBe(1);
@@ -134,17 +160,19 @@ test('compiled entry fails closed and only retries creation after explicit actio
 for (const error of [
   { status: 404, code: 'link_invalid', error: 'El enlace de la encuesta no es válido.' },
   { status: 403, code: 'link_bound', error: 'Este enlace está vinculado al navegador que inició la encuesta.' },
+  { status: 410, code: 'link_expired', error: 'El enlace venció. Volvé a la campaña.' },
   { status: 409, code: 'link_used', error: 'Este enlace ya fue utilizado y no admite otra respuesta.' },
 ]) {
   test(`compiled ${error.code} token never reveals the form or creates a replacement`, async ({ page }) => {
     const observed = await mockApi(page, { sessionError: error });
     await page.goto(`/s/${token}`);
-    await expect(page.getByRole('alert')).toHaveText(error.error);
+    const publicMessage = error.code === 'link_used' ? 'Esta encuesta ya fue respondida.' : 'Esta encuesta no está disponible.';
+    await expect(page.getByRole('alert')).toHaveText(publicMessage);
     await noForm(page);
     await expect(page.getByRole('button', { name: 'Volver a intentar', exact: true })).toHaveCount(0);
     expect(observed.links).toBe(0);
     await page.reload();
-    await expect(page.getByRole('alert')).toHaveText(error.error);
+    await expect(page.getByRole('alert')).toHaveText(publicMessage);
     await noForm(page);
     expect(observed.links).toBe(0);
     expect(observed.errors).toEqual([]);
